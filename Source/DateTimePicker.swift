@@ -34,9 +34,6 @@ public protocol DateTimePickerDelegate {
     /// custom highlight color, default to cyan
     public var highlightColor = UIColor(red: 0/255.0, green: 199.0/255.0, blue: 194.0/255.0, alpha: 1) {
         didSet {
-            todayButton.setTitleColor(highlightColor, for: .normal)
-            colonLabel1.textColor = highlightColor
-            colonLabel2.textColor = highlightColor
         }
     }
     
@@ -106,20 +103,11 @@ public protocol DateTimePickerDelegate {
     }
     
     /// custom title for dismiss button, default to Cancel
-    public var cancelButtonTitle = "Cancel" {
+    public var cancelButtonTitle = "CANCEL" {
         didSet {
             cancelButton.setTitle(cancelButtonTitle, for: .normal)
             let size = cancelButton.sizeThatFits(CGSize(width: 0, height: 44.0)).width + 20.0
             cancelButton.frame = CGRect(x: 20, y: 0, width: size, height: 44)
-        }
-    }
-    
-    /// custom title for reset time button, default to Today
-    public var todayButtonTitle = "Today" {
-        didSet {
-            todayButton.setTitle(todayButtonTitle, for: .normal)
-            let size = todayButton.sizeThatFits(CGSize(width: 0, height: 44.0)).width
-            todayButton.frame = CGRect(x: contentView.frame.width - size - 20, y: 0, width: size, height: 44)
         }
     }
     
@@ -187,7 +175,6 @@ public protocol DateTimePickerDelegate {
     private var shadowView: UIView!
     private var contentView: UIView!
     private var dateTitleLabel: UILabel!
-    private var todayButton: UIButton!
     private var doneButton: UIButton!
     private var cancelButton: UIButton!
     private var colonLabel1: UILabel!
@@ -283,16 +270,16 @@ public protocol DateTimePickerDelegate {
         cancelButton.frame = CGRect(x: 20, y: 0, width: cancelSize, height: 44)
         titleView.addSubview(cancelButton)
         
-        todayButton = UIButton(type: .system)
-        todayButton.setTitle(todayButtonTitle, for: .normal)
-        todayButton.setTitleColor(highlightColor, for: .normal)
-        todayButton.addTarget(self, action: #selector(DateTimePicker.setToday), for: .touchUpInside)
-        todayButton.contentHorizontalAlignment = .right
-        todayButton.titleLabel?.font = UIFont.boldSystemFont(ofSize: 15)
-        todayButton.isHidden = self.minimumDate.compare(Date()) == .orderedDescending || self.maximumDate.compare(Date()) == .orderedAscending
-        let todaySize = todayButton.sizeThatFits(CGSize(width: 0, height: 44.0)).width
-        todayButton.frame = CGRect(x: contentView.frame.width - todaySize - 20, y: 0, width: todaySize, height: 44)
-        titleView.addSubview(todayButton)
+        doneButton = UIButton(type: .system)
+        doneButton.setTitle("DONE", for: .normal)
+        doneButton.setTitleColor(highlightColor, for: .normal)
+        doneButton.addTarget(self, action: #selector(DateTimePicker.dismissView(sender:)), for: .touchUpInside)
+        doneButton.contentHorizontalAlignment = .right
+        doneButton.titleLabel?.font = UIFont.boldSystemFont(ofSize: 15)
+        doneButton.isHidden = self.minimumDate.compare(Date()) == .orderedDescending || self.maximumDate.compare(Date()) == .orderedAscending
+        let doneSize = doneButton.sizeThatFits(CGSize(width: 0, height: 44.0)).width
+        doneButton.frame = CGRect(x: contentView.frame.width - doneSize - 20, y: 0, width: doneSize, height: 44)
+        titleView.addSubview(doneButton)
         
         // day collection view
         let layout = StepCollectionViewFlowLayout()
@@ -333,26 +320,16 @@ public protocol DateTimePickerDelegate {
         }
         contentView.addSubview(borderBottomView)
         
-        // done button
-        doneButton = UIButton(type: .system)
-        doneButton.frame = CGRect(x: 20, y: contentView.frame.height - 10 - 44 - 10, width: contentView.frame.width - 40, height: 44)
-        doneButton.setTitle(doneButtonTitle, for: .normal)
-        doneButton.setTitleColor(.white, for: .normal)
-        doneButton.backgroundColor = doneBackgroundColor ?? darkColor.withAlphaComponent(0.5)
-        doneButton.titleLabel?.font = UIFont.boldSystemFont(ofSize: 13)
-        doneButton.layer.cornerRadius = 3
-        doneButton.layer.masksToBounds = true
-        doneButton.addTarget(self, action: #selector(DateTimePicker.dismissView(sender:)), for: .touchUpInside)
-        contentView.addSubview(doneButton)
+        let oriY = contentView.frame.height - 10 - 44 - 10
         
         // if time picker format is 12 hour, we'll need an extra tableview for am/pm
         // the width for this tableview will be 60, so we need extra -30 for x position of hour & minute tableview
         let extraSpace: CGFloat = is12HourFormat ? -30 : 0
         // hour table view
         hourTableView = UITableView(frame: CGRect(x: contentView.frame.width / 2 - 60 + extraSpace,
-                                                  y: borderBottomView.frame.origin.y + 2,
+                                                  y: borderBottomView.frame.origin.y + 12,
                                                   width: 60,
-                                                  height: doneButton.frame.origin.y - borderBottomView.frame.origin.y - 10))
+                                                  height: oriY - borderBottomView.frame.origin.y + 10))
         hourTableView.rowHeight = 36
         hourTableView.showsVerticalScrollIndicator = false
         hourTableView.separatorStyle = .none
@@ -363,9 +340,9 @@ public protocol DateTimePickerDelegate {
         
         // minute table view
         minuteTableView = UITableView(frame: CGRect(x: contentView.frame.width / 2 + extraSpace,
-                                                    y: borderBottomView.frame.origin.y + 2,
+                                                    y: borderBottomView.frame.origin.y + 12,
                                                     width: 60,
-                                                    height: doneButton.frame.origin.y - borderBottomView.frame.origin.y - 10))
+                                                    height: oriY - borderBottomView.frame.origin.y + 10))
         minuteTableView.rowHeight = 36
         minuteTableView.showsVerticalScrollIndicator = false
         minuteTableView.separatorStyle = .none
@@ -393,39 +370,16 @@ public protocol DateTimePickerDelegate {
         amPmTableView.isHidden = !is12HourFormat || isDatePickerOnly
         contentView.addSubview(amPmTableView)
         
-        
-        // colon
-        colonLabel1 = UILabel(frame: CGRect(x: 0, y: 0, width: 10, height: 36))
-        colonLabel1.center = CGPoint(x: contentView.frame.width / 2 + extraSpace,
-                                    y: (doneButton.frame.origin.y - borderBottomView.frame.origin.y - 10) / 2 + borderBottomView.frame.origin.y)
-        colonLabel1.text = ":"
-        colonLabel1.font = UIFont.boldSystemFont(ofSize: 18)
-        colonLabel1.textColor = highlightColor
-        colonLabel1.textAlignment = .center
-        colonLabel1.isHidden = isDatePickerOnly
-        contentView.addSubview(colonLabel1)
-        
-        colonLabel2 = UILabel(frame: CGRect(x: 0, y: 0, width: 10, height: 36))
-        colonLabel2.text = ":"
-        colonLabel2.font = UIFont.boldSystemFont(ofSize: 18)
-        colonLabel2.textColor = highlightColor
-        colonLabel2.textAlignment = .center
-        var colon2Center = colonLabel1.center
-        colon2Center.x += 57
-        colonLabel2.center = colon2Center
-        colonLabel2.isHidden = !is12HourFormat || isDatePickerOnly
-        contentView.addSubview(colonLabel2)
-        
         // time separators
         separatorTopView = UIView(frame: CGRect(x: 0, y: 0, width: 90 - extraSpace * 2, height: 1))
         separatorTopView.backgroundColor = darkColor.withAlphaComponent(0.2)
-        separatorTopView.center = CGPoint(x: contentView.frame.width / 2, y: borderBottomView.frame.origin.y + 36)
+        separatorTopView.center = CGPoint(x: contentView.frame.width / 2, y: borderBottomView.frame.origin.y + 60)
         separatorTopView.isHidden = isDatePickerOnly
         contentView.addSubview(separatorTopView)
         
         separatorBottomView = UIView(frame: CGRect(x: 0, y: 0, width: 90 - extraSpace * 2, height: 1))
         separatorBottomView.backgroundColor = darkColor.withAlphaComponent(0.2)
-        separatorBottomView.center = CGPoint(x: contentView.frame.width / 2, y: separatorTopView.frame.origin.y + 36)
+        separatorBottomView.center = CGPoint(x: contentView.frame.width / 2, y: separatorTopView.frame.origin.y + 35)
         separatorBottomView.isHidden = isDatePickerOnly
         contentView.addSubview(separatorBottomView)
         
@@ -454,12 +408,6 @@ public protocol DateTimePickerDelegate {
                                             width: self.frame.width,
                                             height: self.contentHeight)
         }, completion: nil)
-    }
-    
-    @objc
-    func setToday() {
-        selectedDate = Date()
-        resetTime()
     }
     
     func resetTime() {
@@ -502,7 +450,7 @@ public protocol DateTimePickerDelegate {
             return
         }
     
-        dateTitleLabel.text = selectedDateString
+        dateTitleLabel.text = "SELECT AN HOUR"
         dateTitleLabel.sizeToFit()
         dateTitleLabel.center = CGPoint(x: contentView.frame.width / 2, y: 22)
     }
@@ -569,6 +517,12 @@ public protocol DateTimePickerDelegate {
             }
             self.removeFromSuperview()
         }
+    }
+    
+    public func setFont(font: UIFont) {
+        self.dateTitleLabel.font = font
+        self.doneButton.titleLabel?.font = font
+        self.cancelButton.titleLabel?.font = font
     }
 }
 
